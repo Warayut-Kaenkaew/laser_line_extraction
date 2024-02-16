@@ -14,6 +14,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(laser_line_extraction_interfaces REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
 
 set(ament_dependencies
    rclcpp 
@@ -21,6 +23,8 @@ set(ament_dependencies
    sensor_msgs
    visualization_msgs
    laser_line_extraction_interfaces
+   rclcpp_lifecycle
+   lifecycle_msgs
 )
 
 
@@ -45,11 +49,19 @@ target_link_libraries(line_extraction_ros line line_extraction)
 
 add_executable(line_extraction_node src/line_extraction_node.cpp)
 ament_target_dependencies(line_extraction_node ${ament_dependencies})
-
 target_link_libraries(line_extraction_node line line_extraction line_extraction_ros)
+
+add_executable(line_extraction_lc src/line_extraction_lc.cpp)
+ament_target_dependencies(line_extraction_lc ${ament_dependencies})
+target_link_libraries(line_extraction_lc line line_extraction)
 
 install(TARGETS
 line_extraction_node
+line_extraction_lc
 DESTINATION lib/${PROJECT_NAME})
 
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME})
+  
 ament_package()
