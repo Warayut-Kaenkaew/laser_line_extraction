@@ -23,7 +23,7 @@ namespace line_extraction
   public:
     // Constructor / destructor
     LifecycleLineExtractionROS(const std::string & node_name, bool intra_process_comms = false);
-    //~LifecycleLineExtractionROS();
+    ~LifecycleLineExtractionROS();
 
     // Running
     void run();
@@ -37,16 +37,17 @@ namespace line_extraction
   private:
     // ROS
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_subscriber_;
-    //std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::LaserScan>> scan_subscriber_;
-    //rclcpp::Publisher<laser_line_extraction_interfaces::msg::LineSegmentList>::SharedPtr line_publisher_;
     std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<laser_line_extraction_interfaces::msg::LineSegmentList>> line_publisher_;
-    //rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_publisher_;
     std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::Marker>> marker_publisher_;
     // Parameters
+    size_t count;
     std::string frame_id_;
     std::string scan_topic_;
     bool pub_markers_;
     double frequency_;
+    double bearing_std_dev, range_std_dev, least_sq_angle_thresh, least_sq_radius_thresh,
+      max_line_gap, min_line_length, min_range, max_range, min_split_dist, outlier_dist;
+    int min_line_points;
     // Line extraction
     rclcpp::TimerBase::SharedPtr timer_;
     LineExtraction line_extraction_;
@@ -59,7 +60,7 @@ namespace line_extraction
     void laserScanCallback(const sensor_msgs::msg::LaserScan::SharedPtr);
 
     std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>> pub_;
-    std::shared_ptr<rclcpp::TimerBase> timer_talker;
+    std::shared_ptr<rclcpp::TimerBase> count_timer_;
   };
 
 } // namespace line_extraction

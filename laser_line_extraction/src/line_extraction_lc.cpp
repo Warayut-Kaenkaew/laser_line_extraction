@@ -11,6 +11,7 @@
 #include "std_msgs/msg/string.hpp"
 
 using namespace std::chrono_literals;
+
 namespace line_extraction {
 
 LifecycleLineExtractionROS::LifecycleLineExtractionROS(const std::string & node_name, 
@@ -21,67 +22,23 @@ LifecycleLineExtractionROS::LifecycleLineExtractionROS(const std::string & node_
   this->declare_parameter<double>("frequency", 25);
   this->declare_parameter<std::string>("frame_id", "laser");
   this->declare_parameter<std::string>("scan_topic", "scan");
-
-
-
   this->declare_parameter<bool>("publish_markers", false);
-
-
-
-
-
-  double bearing_std_dev, range_std_dev, least_sq_angle_thresh, least_sq_radius_thresh,
-      max_line_gap, min_line_length, min_range, max_range, min_split_dist, outlier_dist;
-  int min_line_points;
-
   this->declare_parameter<double>("bearing_std_dev", 1e-3);
-
-  line_extraction_.setBearingVariance(bearing_std_dev * bearing_std_dev);
-
-
   this->declare_parameter<double>("range_std_dev", 0.02);
-
-  line_extraction_.setRangeVariance(range_std_dev * range_std_dev);
-  RCLCPP_DEBUG(this->get_logger(), "range_std_dev: %f", range_std_dev);
-
   this->declare_parameter<double>("least_sq_angle_thresh", 1e-4);
-
-  line_extraction_.setLeastSqAngleThresh(least_sq_angle_thresh);
-
-
   this->declare_parameter<double>("least_sq_radius_thresh", 1e-4);
-  this->get_parameter("least_sq_radius_thresh", least_sq_radius_thresh);
-  line_extraction_.setLeastSqRadiusThresh(least_sq_radius_thresh);
-
-
   this->declare_parameter<double>("max_line_gap", 0.4);
-
-  line_extraction_.setMaxLineGap(max_line_gap);
-
-
   this->declare_parameter<double>("min_line_length", 0.5);
-
-  line_extraction_.setMinLineLength(min_line_length);
-
-
   this->declare_parameter<double>("min_range", 0.4);
-  line_extraction_.setMinRange(min_range);
-
-
   this->declare_parameter<double>("max_range", 10000.0);
-  line_extraction_.setMaxRange(max_range);
-
-
   this->declare_parameter<double>("min_split_dist", 0.05);
-  line_extraction_.setMinSplitDist(min_split_dist);
-
-
   this->declare_parameter<double>("outlier_dist", 0.05);
-  line_extraction_.setOutlierDist(outlier_dist);
-
-
   this->declare_parameter<int>("min_line_points", 9);
-  line_extraction_.setMinLinePoints(static_cast<unsigned int>(min_line_points));
+}
+
+
+LifecycleLineExtractionROS::~LifecycleLineExtractionROS()
+{
 }
 
 
@@ -107,11 +64,11 @@ void LifecycleLineExtractionROS::run()
   }
 }
 
+
 void LifecycleLineExtractionROS::publish()
 {
-  static size_t count = 0;
   auto msg = std::make_unique<std_msgs::msg::String>();
-  msg->data = "Lifecycle HelloWorld #" + std::to_string(++count);
+  msg->data = "Lifecycle node is activating, time count " + std::to_string(++count) +"s";
 
   // Print the current state for demo purposes
   if (!pub_->is_activated()) {
@@ -130,6 +87,7 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 LifecycleLineExtractionROS::on_configure(const rclcpp_lifecycle::State &)
 {
   //load parameters
+  count = 0;
   LifecycleLineExtractionROS::loadParameters();
 
   //initialize publisher
@@ -139,14 +97,7 @@ LifecycleLineExtractionROS::on_configure(const rclcpp_lifecycle::State &)
   {
     LifecycleLineExtractionROS::marker_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>("line_markers", 1);
   }      
-  pub_ = this->create_publisher<std_msgs::msg::String>("lifecycle_chatter", 10);
-
-  //initilize timer
-  // timer_talker = this->create_wall_timer(
-  //   1s, std::bind(&LifecycleLineExtractionROS::publish, this));
-
-  // LifecycleLineExtractionROS::timer_ = this->create_wall_timer(
-  // std::chrono::milliseconds((int)(1000.0 / frequency_)), std::bind(&LifecycleLineExtractionROS::run, this));
+  pub_ = this->create_publisher<std_msgs::msg::String>("lifecycle_count", 10);
 
   RCLCPP_INFO(get_logger(), "on_configure() is called.");
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
@@ -159,10 +110,9 @@ LifecycleLineExtractionROS::on_activate(const rclcpp_lifecycle::State & state)
   LifecycleNode::on_activate(state);
   RCUTILS_LOG_INFO_NAMED(get_name(), "on_activate() is called.");
 
-    //initilize timer
-  timer_talker = this->create_wall_timer(1s, std::bind(&LifecycleLineExtractionROS::publish, this));
-  LifecycleLineExtractionROS::timer_ = this->create_wall_timer(
-    std::chrono::milliseconds((int)(1000.0 / frequency_)), std::bind(&LifecycleLineExtractionROS::run, this));
+  //initilize timer
+  count_timer_ = this->create_wall_timer(1s, std::bind(&LifecycleLineExtractionROS::publish, this));
+  LifecycleLineExtractionROS::timer_ = this->create_wall_timer(std::chrono::milliseconds((int)(1000.0 / frequency_)), std::bind(&LifecycleLineExtractionROS::run, this));
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
@@ -173,11 +123,9 @@ LifecycleLineExtractionROS::on_deactivate(const rclcpp_lifecycle::State & state)
 {
   LifecycleNode::on_deactivate(state);
   std::cout << "timer use count " << timer_.use_count() << std::endl;
+  //free timer only
   timer_.reset();
-  timer_talker.reset();
-  pub_.reset();
-  line_publisher_.reset();
-  marker_publisher_.reset();
+  count_timer_.reset();
 
   RCUTILS_LOG_INFO_NAMED(get_name(), "on_deactivate() is called.");
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
@@ -187,24 +135,24 @@ LifecycleLineExtractionROS::on_deactivate(const rclcpp_lifecycle::State & state)
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 LifecycleLineExtractionROS::on_cleanup(const rclcpp_lifecycle::State &)
 {
+  //free both timer and publisher
   timer_.reset();
-  timer_talker.reset();
+  count_timer_.reset();
   pub_.reset();
   line_publisher_.reset();
   marker_publisher_.reset();
+  
 
   RCUTILS_LOG_INFO_NAMED(get_name(), "on cleanup is called.");
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
+
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 LifecycleLineExtractionROS::on_shutdown(const rclcpp_lifecycle::State & state)
 {
-  // In our shutdown phase, we release the shared pointers to the
-  // timer and publisher. These entities are no longer available
-  // and our node is "clean".
   timer_.reset();
-  timer_talker.reset();
+  count_timer_.reset();
   pub_.reset();
   line_publisher_.reset();
   marker_publisher_.reset();
@@ -213,13 +161,6 @@ LifecycleLineExtractionROS::on_shutdown(const rclcpp_lifecycle::State & state)
     get_name(),
     "on shutdown is called from state %s.",
     state.label().c_str());
-
-  // We return a success and hence invoke the transition to the next
-  // step: "finalized".
-  // If we returned TRANSITION_CALLBACK_FAILURE instead, the state machine
-  // would stay in the current state.
-  // In case of TRANSITION_CALLBACK_ERROR or any thrown exception within
-  // this callback, the state machine transitions to state "errorprocessing".
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
@@ -231,84 +172,60 @@ void LifecycleLineExtractionROS::loadParameters()
   RCLCPP_DEBUG(this->get_logger(), "PARAMETERS:");
 
   // Parameters used by this node
-
-  //this->declare_parameter<double>("frequency", 25);
   this->get_parameter<double>("frequency", frequency_);
-
   RCLCPP_DEBUG(this->get_logger(), "frequency: %f", frequency_);
 
-  //this->declare_parameter<std::string>("frame_id", "laser");
   this->get_parameter<std::string>("frame_id", frame_id_);
-
   RCLCPP_DEBUG(this->get_logger(), "frame_id: %s", frame_id_.c_str());
 
-  //this->declare_parameter<std::string>("scan_topic", "scan");
   this->get_parameter<std::string>("scan_topic", scan_topic_);
-
   RCLCPP_DEBUG(this->get_logger(), "scan_topic: %s", scan_topic_.c_str());
 
-  //this->declare_parameter<bool>("publish_markers", false);
   this->get_parameter("publish_markers", pub_markers_);
-
   RCLCPP_DEBUG(this->get_logger(), "publish_markers: %s", pub_markers_ ? "true" : "false");
 
+
   // Parameters used by the line extraction algorithm
-
-  double bearing_std_dev, range_std_dev, least_sq_angle_thresh, least_sq_radius_thresh,
-      max_line_gap, min_line_length, min_range, max_range, min_split_dist, outlier_dist;
-  int min_line_points;
-
-  //this->declare_parameter<double>("bearing_std_dev", 1e-3);
   this->get_parameter<double>("bearing_std_dev", bearing_std_dev);
   line_extraction_.setBearingVariance(bearing_std_dev * bearing_std_dev);
   RCLCPP_DEBUG(this->get_logger(), "bearing_std_dev: %f", bearing_std_dev);
 
-  //this->declare_parameter<double>("range_std_dev", 0.02);
   this->get_parameter<double>("range_std_dev", range_std_dev);
   line_extraction_.setRangeVariance(range_std_dev * range_std_dev);
   RCLCPP_DEBUG(this->get_logger(), "range_std_dev: %f", range_std_dev);
 
-  //this->declare_parameter<double>("least_sq_angle_thresh", 1e-4);
   this->get_parameter("least_sq_angle_thresh", least_sq_angle_thresh);
   line_extraction_.setLeastSqAngleThresh(least_sq_angle_thresh);
   RCLCPP_DEBUG(this->get_logger(), "least_sq_angle_thresh: %f", least_sq_angle_thresh);
 
-  //this->declare_parameter<double>("least_sq_radius_thresh", 1e-4);
   this->get_parameter("least_sq_radius_thresh", least_sq_radius_thresh);
   line_extraction_.setLeastSqRadiusThresh(least_sq_radius_thresh);
   RCLCPP_DEBUG(this->get_logger(), "least_sq_radius_thresh: %f", least_sq_radius_thresh);
 
-  //this->declare_parameter<double>("max_line_gap", 0.4);
   this->get_parameter("max_line_gap", max_line_gap);
   line_extraction_.setMaxLineGap(max_line_gap);
   RCLCPP_DEBUG(this->get_logger(), "max_line_gap: %f", max_line_gap);
 
-  //this->declare_parameter<double>("min_line_length", 0.5);
   this->get_parameter("min_line_length", min_line_length);
   line_extraction_.setMinLineLength(min_line_length);
   RCLCPP_DEBUG(this->get_logger(), "min_line_length: %f", min_line_length);
 
-  //this->declare_parameter<double>("min_range", 0.4);
   this->get_parameter("min_range", min_range);
   line_extraction_.setMinRange(min_range);
   RCLCPP_DEBUG(this->get_logger(), "min_range: %f", min_range);
 
-  //this->declare_parameter<double>("max_range", 10000.0);
   this->get_parameter("max_range", max_range);
   line_extraction_.setMaxRange(max_range);
   RCLCPP_DEBUG(this->get_logger(), "max_range: %f", max_range);
 
-  //this->declare_parameter<double>("min_split_dist", 0.05);
   this->get_parameter("min_split_dist", min_split_dist);
   line_extraction_.setMinSplitDist(min_split_dist);
   RCLCPP_DEBUG(this->get_logger(), "min_split_dist: %f", min_split_dist);
 
-  //this->declare_parameter<double>("outlier_dist", 0.05);
   this->get_parameter("outlier_dist", outlier_dist);
   line_extraction_.setOutlierDist(outlier_dist);
   RCLCPP_DEBUG(this->get_logger(), "outlier_dist: %f", outlier_dist);
 
-  //this->declare_parameter<int>("min_line_points", 9);
   this->get_parameter("min_line_points", min_line_points);
   line_extraction_.setMinLinePoints(static_cast<unsigned int>(min_line_points));
   RCLCPP_DEBUG(this->get_logger(), "min_line_points: %d", min_line_points);
@@ -394,7 +311,7 @@ void LifecycleLineExtractionROS::laserScanCallback(const sensor_msgs::msg::Laser
   line_extraction_.setRangeData(scan_ranges_doubles);
 }
 
-}
+} //namespace
 
 int main(int argc, char * argv[])
 {
