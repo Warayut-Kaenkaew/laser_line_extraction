@@ -407,7 +407,7 @@ int main(int argc, char * argv[])
 
   rclcpp::executors::SingleThreadedExecutor exe;
 
-  std::shared_ptr<line_extraction::LifecycleLineExtractionROS> lc_node = std::make_shared<line_extraction::LifecycleLineExtractionROS>("lc_talker", false);
+  std::shared_ptr<line_extraction::LifecycleLineExtractionROS> lc_node = std::make_shared<line_extraction::LifecycleLineExtractionROS>("laser_line_extraction_lifecycle", false);
 
   exe.add_node(lc_node->get_node_base_interface());
 
