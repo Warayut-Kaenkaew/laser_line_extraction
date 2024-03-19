@@ -1,6 +1,6 @@
 laser_line_extraction_lifecycle:
   ros__parameters:
-    frequency: 50.0
+    frequency: 80.0
     frame_id: "hokuyo_scan_link"
     scan_topic: "scan"
     publish_markers: true
