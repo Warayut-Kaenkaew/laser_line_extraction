@@ -81,17 +81,17 @@ def generate_launch_description():
     )
 
     #unconfigured state handler -> onConfigured transition
-    unconfigured_state_handler = RegisterEventHandler(
-        OnStateTransition(
-            target_lifecycle_node=laser_line_extrction_lc,
-            goal_state='unconfigured', 
-            entities= [
-                on_configure_trans,
-                LogInfo( msg = "'laser line extraction node' is in the 'UNCONFIGURED' state" ),
-            ],
+    # unconfigured_state_handler = RegisterEventHandler(
+    #     OnStateTransition(
+    #         target_lifecycle_node=laser_line_extrction_lc,
+    #         goal_state='unconfigured', 
+    #         entities= [
+    #             on_configure_trans,
+    #             LogInfo( msg = "'laser line extraction node' is in the 'UNCONFIGURED' state" ),
+    #         ],
 
-        )
-    )
+    #     )
+    # )
     
     #finalized state handler -> end program
     finalized_state_handler = RegisterEventHandler(
@@ -112,6 +112,6 @@ def generate_launch_description():
     ld.add_action(laser_line_extrction_lc)
     ld.add_action(activate_node)
 
-    ld.add_action(unconfigured_state_handler)
+    #ld.add_action(unconfigured_state_handler)
     ld.add_action(finalized_state_handler)
     return ld
